@@ -1,22 +1,30 @@
-import { gql, useQuery } from '@apollo/client'
-import EditAuthor from './EditAuthor'
-import { ALL_AUTHORS } from '../queries'
+import { useState } from "react";
+import { useMutation } from "@apollo/client";
 
-
-
-
+import { ALL_AUTHORS, EDIT_BIRTHYEAR } from "../queries";
 
 const Authors = (props) => {
-  const result = useQuery(ALL_AUTHORS)
-  
-  if (result === undefined) {
-    return null
-  }
-  if (result.loading) {
-    return <div>loading...</div>
-  }
-  const authors = result.data.allAuthors || []
+  const [name, setName] = useState("");
+  const [born, setBornYear] = useState("");
 
+  const [editAuthor] = useMutation(EDIT_BIRTHYEAR, {
+    refetchQueries: [{ query: ALL_AUTHORS }],
+  });
+
+  if (!props.show) {
+    return null;
+  }
+
+  const submit = async (event) => {
+    event.preventDefault();
+
+    editAuthor({ variables: { name, born } });
+
+    setName("");
+    setBornYear("");
+  };
+
+  const authors = props.authors;
   return (
     <div>
       <h2>authors</h2>
@@ -28,7 +36,7 @@ const Authors = (props) => {
             <th>books</th>
           </tr>
           {authors.map((a) => (
-            <tr key={a.name}>
+            <tr key={a.id}>
               <td>{a.name}</td>
               <td>{a.born}</td>
               <td>{a.bookCount}</td>
@@ -36,9 +44,41 @@ const Authors = (props) => {
           ))}
         </tbody>
       </table>
-      <EditAuthor authorsNames={authors.map((a) => a.name)} />
-    </div>
-  )
-}
+      <form onSubmit={submit}>
+        <div>
+          <select onChange={({ target }) => setName(target.value)}>
+            {/* All Authors in the list */}
+            {/* {authors.map((a) => (
+              <option key={a.name} value={a.name}>
+                {a.name}
+              </option>
+            ))} */}
 
-export default Authors
+            {/* Authors without birth year */}
+            {/* Warning: Use the `defaultValue` or `value` props on <select> instead of setting `selected` on <option>. */}
+            <option value="DEFAULT">
+              {/* <option hidden disabled selected value> */}
+              --- select an author ---
+            </option>
+            {authors.map((a) =>
+              a && !a.born ? (
+                <option key={a.id} value={a.name}>
+                  {a.name}
+                </option>
+              ) : null
+            )}
+          </select>
+        </div>
+        <div>
+          <input
+            value={born}
+            onChange={({ target }) => setBornYear(parseInt(target.value))}
+          />
+        </div>
+        <button type="submit">Change Year</button>
+      </form>
+    </div>
+  );
+};
+
+export default Authors;
